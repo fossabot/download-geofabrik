@@ -11,7 +11,6 @@ go:
 before_install:
 - go get github.com/mattn/goveralls
 install:
-- go get -v github.com/mitchellh/gox
 - go get -t -v ./...
 script: go test -bench=. -benchmem -v ./...
 
@@ -93,31 +92,43 @@ jobs:
     if: tag IS present OR ( commit_message =~ /(force-build|1_10)/
       AND commit_message !~ /(no-build|no-1_10)/ )
     go: stable
-    script: make
+    script: 
+    - mkdir -p $GOPATH/src/github.com/mitchellh && cd $GOPATH/src/github.com/mitchellh && git clone github.com/mitchellh/gox && cd $GOTPATH/bin && go build  $GOPATH/src/github.com/mitchellh/gox/ 
+    - make
   - stage: build 1.9
     if: tag IS present OR ( commit_message =~ /(force-build|1_9)/
       AND commit_message !~ /(no-build|no-1_9)/ )
     go: '1.9'
-    script: make
+    script:
+    - mkdir -p $GOPATH/src/github.com/mitchellh && cd $GOPATH/src/github.com/mitchellh && git clone github.com/mitchellh/gox && cd $GOTPATH/bin && go build  $GOPATH/src/github.com/mitchellh/gox/ 
+    - make
   - stage: build 1.8
     if: tag IS present OR ( commit_message =~ /(force-build|1_8)/
       AND commit_message !~ /(no-build|no-1_8)/ )
     go: '1.8'
-    script: make
+    script: 
+    - mkdir -p $GOPATH/src/github.com/mitchellh && cd $GOPATH/src/github.com/mitchellh && git clone github.com/mitchellh/gox && cd $GOTPATH/bin && go build  $GOPATH/src/github.com/mitchellh/gox/ 
+    - make
   - stage: build 1.7
     if: tag IS present OR ( commit_message =~ /(force-build|1_9)/
       AND commit_message !~ /(no-build|no-1_7)/ )
     go: '1.7'
-    script: make
+    script:
+    - mkdir -p $GOPATH/src/github.com/mitchellh && cd $GOPATH/src/github.com/mitchellh && git clone github.com/mitchellh/gox && cd $GOTPATH/bin && go build  $GOPATH/src/github.com/mitchellh/gox/ 
+    - make
   - stage: build 1.11
     if: tag IS present OR ( commit_message =~ /(force-build|1_11)/
       AND commit_message !~ /(no-build|no-1_11)/ )
     go: '1.11'
-    script: make
+    script:
+    - mkdir -p $GOPATH/src/github.com/mitchellh && cd $GOPATH/src/github.com/mitchellh && git clone github.com/mitchellh/gox && cd $GOTPATH/bin && go build  $GOPATH/src/github.com/mitchellh/gox/ 
+    - make
   - stage: build tip
     if: tag IS present OR commit_message !~ /(no-build)/
     go: tip
-    script: make
+    script:
+    - mkdir -p $GOPATH/src/github.com/mitchellh && cd $GOPATH/src/github.com/mitchellh && git clone github.com/mitchellh/gox && cd $GOTPATH/bin && go build  $GOPATH/src/github.com/mitchellh/gox/ 
+    - make
   - stage: build stable
     if: tag IS present OR commit_message !~ /(no-build)/
     go: stable
