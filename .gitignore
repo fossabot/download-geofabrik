@@ -3,8 +3,8 @@
 *.a
 *.so
 
-download-geofabrik*/
-download-geofabrik
+download-geofabrik_*/
+#download-geofabrik
 
 # Folders
 _obj

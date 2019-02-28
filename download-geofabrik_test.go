@@ -1,4 +1,4 @@
-package main
+package downloadgeofabrik
 
 import (
 	"fmt"
@@ -99,7 +99,7 @@ func Test_hashFileMD5(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := hashFileMD5(tt.args.filePath)
+			got, err := HashFileMD5(tt.args.filePath)
 			if err != nil != tt.wantErr {
 				t.Errorf("hashFileMD5(%v) error = %v, wantErr %v", tt.args.filePath, err, tt.wantErr)
 				return
@@ -113,11 +113,11 @@ func Test_hashFileMD5(t *testing.T) {
 
 func Benchmark_hashFileMD5_LICENSE(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		hashFileMD5("./LICENSE")
+		HashFileMD5("./LICENSE")
 	}
 }
 func Benchmark_controlHash_LICENSE(b *testing.B) {
-	hash, _ := hashFileMD5("./LICENSE")
+	hash, _ := HashFileMD5("./LICENSE")
 	hashfile := "/tmp/download-geofabrik-test.hash"
 	ioutil.WriteFile(hashfile, []byte(hash), 0644)
 	for n := 0; n < b.N; n++ {
@@ -142,7 +142,7 @@ func Test_controlHash(t *testing.T) {
 		{name: "Check with LICENSE file wrong hash", fileToHash: "./LICENSE", args: args{hashfile: "/tmp/download-geofabrik-test.hash", hash: "65d26fcc2f35ea6a181ac777e42db1eb"}, want: false, wantErr: false},
 	}
 	for _, tt := range tests {
-		hash, _ := hashFileMD5(tt.fileToHash)
+		hash, _ := HashFileMD5(tt.fileToHash)
 		ioutil.WriteFile(tt.args.hashfile, []byte(hash), 0644)
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := controlHash(tt.args.hashfile, tt.args.hash)
@@ -183,7 +183,7 @@ func Test_downloadChecksum(t *testing.T) {
 		*delement = tt.delement
 		t.Run(tt.name, func(t *testing.T) {
 			if *dCheck { // If I want to compare checksum, Download file
-				configPtr, err := loadConfig(*fConfig)
+				configPtr, err := LoadConfig(*fConfig)
 				if err != nil {
 					t.Error(err)
 				}
@@ -191,7 +191,7 @@ func Test_downloadChecksum(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
-				myURL, err := elem2URL(configPtr, myElem, tt.args.format)
+				myURL, err := Element2URL(configPtr, myElem, tt.args.format)
 				if err != nil {
 					t.Error(err)
 				}
@@ -342,7 +342,7 @@ func Test_downloadCommand(t *testing.T) {
 			}
 			patch := monkey.Patch(downloadFromURL, fakedownloadFromURL)
 			patch2 := monkey.Patch(downloadChecksum, fakedownloadChecksum)
-			patch3 := monkey.Patch(fileExist, fakefileExist)
+			patch3 := monkey.Patch(IsFileExist, fakefileExist)
 			defer patch.Unpatch()
 			defer patch2.Unpatch()
 			defer patch3.Unpatch()

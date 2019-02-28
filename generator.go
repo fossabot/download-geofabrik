@@ -1,4 +1,4 @@
-package main
+package downloadgeofabrik
 
 import (
 	"fmt"
@@ -15,14 +15,15 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-var bar *pb.ProgressBar
+var bar *pb.ProgressBar // global var
+// TODO: find how to use it locally
 
-// ElementSlice contain all Elements
+// ElementMap contain all Elements
 // TODO: It's not a slice but a MAP!!!!
-type ElementSlice map[string]Element
+type ElementMap map[string]Element
 
 // Generate make the slice which contain all Elements
-func (e ElementSlice) Generate(myConfig *Config) ([]byte, error) {
+func (e ElementMap) Generate(myConfig *Config) ([]byte, error) {
 	myConfig.Elements = e
 	return yaml.Marshal(myConfig)
 }
@@ -30,11 +31,11 @@ func (e ElementSlice) Generate(myConfig *Config) ([]byte, error) {
 // Ext simple struct for managing ElementSlice and crawler
 type Ext struct {
 	*gocrawl.DefaultExtender
-	Elements ElementSlice
+	Elements ElementMap
 }
 
-// addHash find if a hash is available and append it to e
-func (e *Element) addHash(myel *goquery.Selection) {
+// GeofabrikAddHash find if a hash is available and append it to e
+func (e *Element) GeofabrikAddHash(myel *goquery.Selection) {
 	a := myel.Find("a")
 	if a.Length() == 2 { // If only 1 a there is no hash
 		validHash := []string{"md5"}
@@ -51,7 +52,7 @@ func (e *Element) addHash(myel *goquery.Selection) {
 	}
 }
 
-func (e *Ext) parseGeofabrik(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
+func (e *Ext) ParseGeofabrik(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
 	var thisElement Element
 	downloadMain := doc.Find("div.download-main")
 	parent, haveParent := doc.Find("p a").Attr("href")                        // I'm not shure it is parent
@@ -74,22 +75,22 @@ func (e *Ext) parseGeofabrik(ctx *gocrawl.URLContext, res *http.Response, doc *g
 				myel := li.Eq(el)
 				linkval, link := myel.Find("a").Attr("href")
 				if link {
-					for _, v := range []string{"osm.pbf", "shp.zip", "osm.bz2", "osh.pbf", "poly", "-updates"} {
+					for _, v := range []string{ffosmPbf.ext, ffshpZip.ext, ffosmBz2.ext, ffoshPbf.ext, ffpoly.ext, "-updates"} {
 						extFound := strings.Contains(linkval, v)
 						if extFound {
 							switch v {
-							case "osm.pbf":
+							case ffosmPbf.ext:
 								thisElement.ID = linkval[0 : len(linkval)-15]
 								thisElement.Formats = append(thisElement.Formats, v)
-								thisElement.addHash(myel)
-							case "poly":
+								thisElement.GeofabrikAddHash(myel)
+							case ffpoly.ext:
 								thisElement.Formats = append(thisElement.Formats, v)
-								thisElement.Formats = append(thisElement.Formats, "kml")
+								thisElement.Formats = append(thisElement.Formats, ffkml.ext) // Hack, if poly is generated, there is also a kml file!
 							case "-updates":
-								thisElement.Formats = append(thisElement.Formats, "state")
+								thisElement.Formats = append(thisElement.Formats, ffstate.ext)
 							default:
 								thisElement.Formats = append(thisElement.Formats, v)
-								thisElement.addHash(myel)
+								thisElement.GeofabrikAddHash(myel)
 							}
 						}
 					}
@@ -186,7 +187,7 @@ func (e *Ext) parseGeofabrik(ctx *gocrawl.URLContext, res *http.Response, doc *g
 	return nil, true
 }
 
-func (e *Ext) mergeElement(element *Element) error {
+func (e *Ext) MergeElement(element *Element) error {
 	if cE, ok := e.Elements[element.ID]; ok {
 		if cE.Parent != element.Parent {
 			return fmt.Errorf("Cant merge : Parent mismatch")
@@ -204,7 +205,7 @@ func (e *Ext) mergeElement(element *Element) error {
 	return nil
 }
 
-func (e *Ext) parseOSMfr(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
+func (e *Ext) ParseOSMfr(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
 	parents := strings.Split(doc.Url.Path, "/")
 	parent := parents[len(parents)-2]          // Get x in this kind of url http(s)://1/2/.../x/
 	if strings.EqualFold(parent, "extracts") { // should I try == or a switch?
@@ -239,7 +240,7 @@ func (e *Ext) parseOSMfr(ctx *gocrawl.URLContext, res *http.Response, doc *goque
 					}
 					if !strings.EqualFold(e.Elements[name].ID, name) {
 						element.Formats = append(element.Formats, ext)
-						err := e.mergeElement(&element)
+						err := e.MergeElement(&element)
 						if err != nil {
 							log.Panicln("Can't merge element,", err)
 						}
@@ -264,7 +265,8 @@ func (e *Ext) parseOSMfr(ctx *gocrawl.URLContext, res *http.Response, doc *goque
 	return nil, true
 }
 
-func (e *Ext) parseGisLab(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
+// ParseGisLab is default parser for Gislab files
+func (e *Ext) ParseGisLab(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
 	list := doc.Find("table tr")
 	for line := range list.Nodes {
 		tds := list.Eq(line).Find("td")
@@ -272,13 +274,13 @@ func (e *Ext) parseGisLab(ctx *gocrawl.URLContext, res *http.Response, doc *goqu
 			element := *new(Element)
 			element.ID = tds.Eq(0).Text()
 			element.Name = tds.Eq(1).Text()
-			element.Formats = append(element.Formats, "osm.pbf") // Not checked elements
-			element.Formats = append(element.Formats, "osm.bz2") // Pray for non changing data structure...
-			element.Formats = append(element.Formats, "poly")    // Not checked but seems to be used for generating osm.pbf/osm.bz2
+			element.Formats = append(element.Formats, ffosmPbf.ext) // Not checked elements
+			element.Formats = append(element.Formats, ffosmBz2.ext) // Pray for non changing data structure...
+			element.Formats = append(element.Formats, ffpoly.ext)   // Not checked but seems to be used for generating osm.pbf/osm.bz2
 			if *fVerbose && !*fQuiet {
 				log.Println("Adding", element.Name)
 			}
-			err := e.mergeElement(&element)
+			err := e.MergeElement(&element)
 			if err != nil {
 				log.Panicln("Can't merge element,", err)
 			}
@@ -287,7 +289,7 @@ func (e *Ext) parseGisLab(ctx *gocrawl.URLContext, res *http.Response, doc *goqu
 	return nil, true
 }
 
-// Visit launch right crawler
+// Visit launch right crawler using URL().Host
 func (e *Ext) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
 	if *fVerbose && !*fQuiet && !*fProgress {
 		fmt.Printf("Visit: %s\n", ctx.URL())
@@ -297,11 +299,11 @@ func (e *Ext) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Do
 	}
 	switch ctx.URL().Host {
 	case "download.geofabrik.de":
-		return e.parseGeofabrik(ctx, res, doc)
+		return e.ParseGeofabrik(ctx, res, doc)
 	case "download.openstreetmap.fr":
-		return e.parseOSMfr(ctx, res, doc)
+		return e.ParseOSMfr(ctx, res, doc)
 	case "be.gis-lab.info":
-		return e.parseGisLab(ctx, res, doc)
+		return e.ParseGisLab(ctx, res, doc)
 	default:
 		panic(fmt.Sprintln("Panic! " + ctx.URL().Host + " is not supported!"))
 	}
@@ -355,6 +357,13 @@ func (e *Ext) Filter(ctx *gocrawl.URLContext, isVisited bool) bool {
 }
 
 // GenerateCrawler creating a gocrawl to parse the website.
+//
+// Here is default settings:
+//	CrawlDelay = 100 * time.Millisecond
+//	LogFlags = gocrawl.LogError
+//	SameHostOnly = true //false
+//	UserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.116 Safari/537.36"
+//	MaxVisits = 15000
 func GenerateCrawler(url string, fname string, myConfig *Config) {
 	ext := &Ext{&gocrawl.DefaultExtender{}, make(map[string]Element)}
 	// Set custom options
@@ -392,25 +401,29 @@ func GenerateCrawler(url string, fname string, myConfig *Config) {
 	}
 }
 
-//Generate main function
+//Generate prepare config file and launch GenerateCrawler
+// it can get:
+//
+//  "geofabrik"
+//  "openstreetmap.fr"
+//  "gislab"
 func Generate(configfile string) {
 	switch *fService {
-	case "geofabrik":
-		//Generate geofabrik.yml
+	case "geofabrik": //Generate geofabrik.yml
 		var geofabrik Config
 		geofabrik.BaseURL = "https://download.geofabrik.de"
 		geofabrik.Formats = make(map[string]format)
 		//TODO: make a function for adding formats
 		//geofabrik.Formats["osh.pbf"] = format{ID: "osh.pbf", Loc: ".osh.pbf"}
 		//geofabrik.Formats["osh.pbf.md5"] = format{ID: "osh.pbf.md5", Loc: ".osh.pbf.md5"}
-		geofabrik.Formats["osm.bz2"] = format{ID: "osm.bz2", Loc: "-latest.osm.bz2"}
-		geofabrik.Formats["osm.bz2.md5"] = format{ID: "osm.bz2.md5", Loc: "-latest.osm.bz2.md5"}
-		geofabrik.Formats["osm.pbf"] = format{ID: "osm.pbf", Loc: "-latest.osm.pbf"}
-		geofabrik.Formats["osm.pbf.md5"] = format{ID: "osm.pbf.md5", Loc: "-latest.osm.pbf.md5"}
-		geofabrik.Formats["poly"] = format{ID: "poly", Loc: ".poly"}
-		geofabrik.Formats["kml"] = format{ID: "kml", Loc: ".kml"}
-		geofabrik.Formats["state"] = format{ID: "state", Loc: "-updates/state.txt"}
-		geofabrik.Formats["shp.zip"] = format{ID: "shp.zip", Loc: "-latest-free.shp.zip"}
+		geofabrik.Formats[ffosmBz2.ext] = format{ID: ffosmBz2.ext, Loc: "-latest." + ffosmBz2.ext}
+		geofabrik.Formats[ffosmBz2.ext+ffmd5.ext] = format{ID: ffosmBz2.ext + ffmd5.ext, Loc: "-latest." + ffosmBz2.ext + ffmd5.ext}
+		geofabrik.Formats[ffosmPbf.ext] = format{ID: ffosmPbf.ext, Loc: "-latest." + ffosmPbf.ext}
+		geofabrik.Formats[ffosmPbf.ext+ffmd5.ext] = format{ID: ffosmPbf.ext + ffmd5.ext, Loc: "-latest." + ffosmPbf.ext + ffmd5.ext}
+		geofabrik.Formats[ffpoly.ext] = format{ID: ffpoly.ext, Loc: "." + ffpoly.ext}
+		geofabrik.Formats[ffkml.ext] = format{ID: ffkml.ext, Loc: "." + ffkml.ext}
+		geofabrik.Formats[ffstate.ext] = format{ID: ffstate.ext, Loc: "-updates/state.txt"}
+		geofabrik.Formats[ffshpZip.ext] = format{ID: ffshpZip.ext, Loc: "-latest-free." + ffshpZip.ext}
 		GenerateCrawler("https://download.geofabrik.de/", configfile, &geofabrik)
 		if !*fQuiet {
 			log.Println(configfile, " generated.")
@@ -420,9 +433,9 @@ func Generate(configfile string) {
 		var myConfig Config
 		myConfig.BaseURL = "https://download.openstreetmap.fr/extracts"
 		myConfig.Formats = make(map[string]format)
-		myConfig.Formats["osm.pbf"] = format{ID: "osm.pbf", Loc: "-latest.osm.pbf"}
-		myConfig.Formats["poly"] = format{ID: "poly", Loc: ".poly", BasePath: "../polygons/"}
-		myConfig.Formats["state"] = format{ID: "state", Loc: ".state.txt"}
+		myConfig.Formats[ffosmPbf.ext] = format{ID: ffosmPbf.ext, Loc: "-latest." + ffosmPbf.ext}
+		myConfig.Formats[ffpoly.ext] = format{ID: ffpoly.ext, Loc: "." + ffpoly.ext, BasePath: "../polygons/"}
+		myConfig.Formats[ffstate.ext] = format{ID: ffstate.ext, Loc: ".state.txt"}
 		GenerateCrawler("https://download.openstreetmap.fr/", configfile, &myConfig)
 		if !*fQuiet {
 			log.Println(configfile, " generated.")
@@ -431,9 +444,23 @@ func Generate(configfile string) {
 		var myConfig Config
 		myConfig.BaseURL = "http://be.gis-lab.info/project/osm_dump"
 		myConfig.Formats = make(map[string]format)
-		myConfig.Formats["osm.pbf"] = format{ID: "osm.pbf", BaseURL: "http://data.gis-lab.info/osm_dump/dump", BasePath: "latest/", Loc: ".osm.pbf"}
-		myConfig.Formats["osm.bz2"] = format{ID: "osm.bz2", BaseURL: "http://data.gis-lab.info/osm_dump/dump", BasePath: "latest/", Loc: ".osm.bz2"}
-		myConfig.Formats["poly"] = format{ID: "poly", BaseURL: "https://raw.githubusercontent.com/nextgis/osmdump_poly/master", Loc: ".poly"}
+		myConfig.Formats[ffosmPbf.ext] = format{
+			ID:       ffosmPbf.ext,
+			BaseURL:  "http://data.gis-lab.info/osm_dump/dump",
+			BasePath: "latest/",
+			Loc:      "." + ffosmPbf.ext,
+		}
+		myConfig.Formats[ffosmBz2.ext] = format{
+			ID:       ffosmBz2.ext,
+			BaseURL:  "http://data.gis-lab.info/osm_dump/dump",
+			BasePath: "latest/",
+			Loc:      "." + ffosmBz2.ext,
+		}
+		myConfig.Formats[ffpoly.ext] = format{
+			ID:      ffpoly.ext,
+			BaseURL: "https://raw.githubusercontent.com/nextgis/osmdump_poly/master",
+			Loc:     "." + ffpoly.ext,
+		}
 		GenerateCrawler("http://be.gis-lab.info/project/osm_dump/iframe.php", configfile, &myConfig)
 		if !*fQuiet {
 			log.Println(configfile, " generated.")

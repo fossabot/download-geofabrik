@@ -1,4 +1,4 @@
-package main
+package downloadgeofabrik
 
 import (
 	"io/ioutil"
@@ -48,7 +48,7 @@ func TestElementSlice_Generate(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		e       ElementSlice
+		e       ElementMap
 		args    args
 		want    []byte
 		wantErr bool
@@ -140,7 +140,7 @@ func TestExt_mergeElement(t *testing.T) {
 				DefaultExtender: new(gocrawl.DefaultExtender),
 				Elements:        sampleElementValidPtr,
 			}
-			if err := e.mergeElement(tt.args.element); err != nil != tt.wantErr {
+			if err := e.MergeElement(tt.args.element); err != nil != tt.wantErr {
 				t.Errorf("Ext.mergeElement() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -159,7 +159,7 @@ func Benchmark_Element_addHash_noHash(b *testing.B) {
 	}
 	sampleSelection := doc.Find("p")
 	for n := 0; n < b.N; n++ {
-		sampleElement.addHash(sampleSelection)
+		sampleElement.GeofabrikAddHash(sampleSelection)
 	}
 }
 func Benchmark_Element_addHash_Hash(b *testing.B) {
@@ -174,7 +174,7 @@ func Benchmark_Element_addHash_Hash(b *testing.B) {
 	}
 	sampleSelection := doc.Find("p")
 	for n := 0; n < b.N; n++ {
-		sampleElement.addHash(sampleSelection)
+		sampleElement.GeofabrikAddHash(sampleSelection)
 	}
 }
 
@@ -242,7 +242,7 @@ func TestElement_addHash(t *testing.T) {
 				Parent:  tt.fields.Parent,
 			}
 
-			e.addHash(tt.args.myel)
+			e.GeofabrikAddHash(tt.args.myel)
 			if !reflect.DeepEqual(*e, tt.wantElement) {
 				t.Errorf("addHash(%v) e=%v, want %v", tt.args.myel, *e, tt.wantElement)
 			}
@@ -269,16 +269,16 @@ func TestExt_parseOSMfr(t *testing.T) {
 		name   string
 		fields Ext
 		args   args
-		want   ElementSlice
+		want   ElementMap
 		want1  bool
 	}{
 		// TODO: Add test cases.
 		{
 			name:   "osm valid1",
-			fields: Ext{Elements: ElementSlice{}},
+			fields: Ext{Elements: ElementMap{}},
 			args:   args{doc: f(osmfrValidHTML1, "http://download.openstreetmap.fr/extracts/")},
 			want1:  true,
-			want: ElementSlice{
+			want: ElementMap{
 				"africa":          {ID: "africa", Meta: false, Name: "africa", Formats: []string{"osm.pbf", "osm.pbf.md5", "state"}, Parent: "", File: ""},
 				"asia":            {ID: "asia", Meta: false, Name: "asia", Formats: []string{"osm.pbf", "osm.pbf.md5", "state"}, Parent: "", File: ""},
 				"central-america": {ID: "central-america", Meta: false, Name: "central-america", Formats: []string{"osm.pbf", "osm.pbf.md5", "state"}, Parent: "", File: ""},
@@ -291,9 +291,9 @@ func TestExt_parseOSMfr(t *testing.T) {
 		},
 		{
 			name:   "osm valid2",
-			fields: Ext{Elements: ElementSlice{}},
+			fields: Ext{Elements: ElementMap{}},
 			args:   args{doc: f(osmfrValidHTML2, "http://download.openstreetmap.fr/extracts/merge/")},
-			want: ElementSlice{
+			want: ElementMap{
 				"france_metro_dom_com_nc": {ID: "france_metro_dom_com_nc", File: "", Meta: false, Name: "france_metro_dom_com_nc", Formats: []string{"osm.pbf", "state"}, Parent: "merge"},
 				"france_taaf":             {ID: "france_taaf", File: "", Meta: false, Name: "france_taaf", Formats: []string{"osm.pbf", "state"}, Parent: "merge"},
 				//"israel_and_palestine":    {ID: "israel_and_palestine", File: "", Meta: false, Name: "israel_and_palestine", Formats: []string{"osm.pbf", "state"}, Parent: "merge"},
@@ -303,10 +303,10 @@ func TestExt_parseOSMfr(t *testing.T) {
 			want1: true,
 		}, {
 			name:   "osm Poly valid",
-			fields: Ext{Elements: ElementSlice{}},
+			fields: Ext{Elements: ElementMap{}},
 			args:   args{doc: f(osmfrPolygonJapanValidHTML, "http://download.openstreetmap.fr/polygons/asia/japan/")},
 			want1:  true,
-			want: ElementSlice{
+			want: ElementMap{
 				"chubu":    {ID: "chubu", Meta: false, Name: "chubu", Formats: []string{"poly"}, Parent: "japan", File: ""},
 				"chugoku":  {ID: "chugoku", Meta: false, Name: "chugoku", Formats: []string{"poly"}, Parent: "japan", File: ""},
 				"hokkaido": {ID: "hokkaido", Meta: false, Name: "hokkaido", Formats: []string{"poly"}, Parent: "japan", File: ""},
@@ -324,7 +324,7 @@ func TestExt_parseOSMfr(t *testing.T) {
 				DefaultExtender: tt.fields.DefaultExtender,
 				Elements:        tt.fields.Elements,
 			}
-			_, got1 := e.parseOSMfr(tt.args.ctx, tt.args.res, tt.args.doc)
+			_, got1 := e.ParseOSMfr(tt.args.ctx, tt.args.res, tt.args.doc)
 			if !reflect.DeepEqual(e.Elements, tt.want) {
 				t.Errorf("Ext.parseOSMfr() \nExt.Elements= %+v, want %+v", e.Elements, tt.want)
 			}
@@ -354,16 +354,16 @@ func TestExt_parseGisLab(t *testing.T) {
 		name   string
 		fields Ext
 		args   args
-		want   ElementSlice
+		want   ElementMap
 		want1  bool
 	}{
 		// TODO: Add test cases.
 		{
 			name:   "osm valid1",
-			fields: Ext{Elements: ElementSlice{}},
+			fields: Ext{Elements: ElementMap{}},
 			args:   args{doc: f(gislabSampleHTML, "http://be.gis-lab.info/project/osm_dump/iframe.php")},
 			want1:  true,
-			want: ElementSlice{
+			want: ElementMap{
 				"local": {ID: "local", Name: "локальное покрытие", Formats: []string{"osm.pbf", "osm.bz2", "poly"}, File: "", Meta: false, Parent: ""},
 				"AM":    {ID: "AM", Name: "Армения", Formats: []string{"osm.pbf", "osm.bz2", "poly"}, File: "", Meta: false, Parent: ""},
 				"AZ":    {ID: "AZ", Name: "Азербайджан", Formats: []string{"osm.pbf", "osm.bz2", "poly"}, File: "", Meta: false, Parent: ""},
@@ -385,7 +385,7 @@ func TestExt_parseGisLab(t *testing.T) {
 				DefaultExtender: tt.fields.DefaultExtender,
 				Elements:        tt.fields.Elements,
 			}
-			_, got1 := e.parseGisLab(tt.args.ctx, tt.args.res, tt.args.doc)
+			_, got1 := e.ParseGisLab(tt.args.ctx, tt.args.res, tt.args.doc)
 			if !reflect.DeepEqual(e.Elements, tt.want) {
 				// check one by one, if gislab have add some files don't panic!
 				for i, k := range tt.want {
@@ -409,10 +409,10 @@ func Benchmark_Parser_osmfrValidHTML1(b *testing.B) {
 		b.Error(err)
 	}
 
-	ext := Ext{Elements: ElementSlice{}}
+	ext := Ext{Elements: ElementMap{}}
 
 	for n := 0; n < b.N; n++ {
-		ext.parseOSMfr(nil, nil, doc)
+		ext.ParseOSMfr(nil, nil, doc)
 	}
 }
 func Benchmark_Parser_osmfrValidHTML2(b *testing.B) {
@@ -422,10 +422,10 @@ func Benchmark_Parser_osmfrValidHTML2(b *testing.B) {
 		b.Error(err)
 	}
 
-	ext := Ext{Elements: ElementSlice{}}
+	ext := Ext{Elements: ElementMap{}}
 
 	for n := 0; n < b.N; n++ {
-		ext.parseOSMfr(nil, nil, doc)
+		ext.ParseOSMfr(nil, nil, doc)
 	}
 }
 
@@ -436,10 +436,10 @@ func Benchmark_Parser_osmfrPolygonJapanValidHTML(b *testing.B) {
 		b.Error(err)
 	}
 
-	ext := Ext{Elements: ElementSlice{}}
+	ext := Ext{Elements: ElementMap{}}
 
 	for n := 0; n < b.N; n++ {
-		ext.parseOSMfr(nil, nil, doc)
+		ext.ParseOSMfr(nil, nil, doc)
 	}
 }
 
@@ -460,16 +460,16 @@ func TestExt_parseGeofabrik(t *testing.T) {
 	}
 	tests := []struct {
 		name  string
-		args  args         // Contain tests
-		want  ElementSlice // to compare with e.Elements
-		want1 bool         // always true
+		args  args       // Contain tests
+		want  ElementMap // to compare with e.Elements
+		want1 bool       // always true
 	}{
 		// TODO: Add test cases.
 		{
 			name:  "Parse Geofabrik SouthAmerica",
 			args:  args{doc: f(geofabrikSouthAmericaHTML)},
 			want1: true,
-			want: ElementSlice{
+			want: ElementMap{
 				"us":            {ID: "us", File: "", Meta: true, Name: "United States of America", Formats: []string{}, Parent: "north-america"},
 				"south-america": {ID: "south-america", File: "", Meta: false, Name: "South America", Formats: []string{"osm.pbf", "osm.pbf.md5", "osm.bz2", "osm.bz2.md5", "poly", "kml", "state"}, Parent: ""},
 			},
@@ -478,7 +478,7 @@ func TestExt_parseGeofabrik(t *testing.T) {
 			name:  "Parse Geofabrik District of Columbia",
 			args:  args{doc: f(geofabrikDistrictOfColumbiaHTML)},
 			want1: true,
-			want: ElementSlice{
+			want: ElementMap{
 				"us":                   {ID: "us", File: "", Meta: true, Name: "United States of America", Formats: []string{}, Parent: "north-america"},
 				"district-of-columbia": {ID: "district-of-columbia", File: "", Meta: false, Name: "District of Columbia", Formats: []string{"osm.pbf", "osm.pbf.md5", "shp.zip", "osm.bz2", "osm.bz2.md5", "poly", "kml", "state"}, Parent: "us"},
 			},
@@ -487,7 +487,7 @@ func TestExt_parseGeofabrik(t *testing.T) {
 			name:  "Parse Geofabrik Shikoku",
 			args:  args{doc: f(geofabrikShikokuHTML)},
 			want1: true,
-			want: ElementSlice{
+			want: ElementMap{
 				"us":      {ID: "us", File: "", Meta: true, Name: "United States of America", Formats: []string{}, Parent: "north-america"},
 				"shikoku": {ID: "shikoku", File: "", Meta: false, Name: "Shikoku", Formats: []string{"osm.pbf", "osm.pbf.md5", "shp.zip", "osm.bz2", "osm.bz2.md5", "poly", "kml", "state"}, Parent: "japan"},
 			},
@@ -497,9 +497,9 @@ func TestExt_parseGeofabrik(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &Ext{
 				DefaultExtender: new(gocrawl.DefaultExtender),
-				Elements:        ElementSlice{},
+				Elements:        ElementMap{},
 			}
-			e.parseGeofabrik(tt.args.ctx, tt.args.res, tt.args.doc)
+			e.ParseGeofabrik(tt.args.ctx, tt.args.res, tt.args.doc)
 
 			if !reflect.DeepEqual(e.Elements, tt.want) {
 				t.Errorf("Ext.parseGeofabrik() got = %+v, want %+v", e.Elements, tt.want)
@@ -518,9 +518,9 @@ func Benchmark_Parser_geofabrikSouthAmericaHTML(b *testing.B) {
 	if err != nil {
 		b.Error(err)
 	}
-	ext := Ext{Elements: ElementSlice{}}
+	ext := Ext{Elements: ElementMap{}}
 	for n := 0; n < b.N; n++ {
-		ext.parseGeofabrik(nil, nil, doc)
+		ext.ParseGeofabrik(nil, nil, doc)
 	}
 }
 
@@ -529,9 +529,9 @@ func Benchmark_Parser_geofabrikDistrictOfColumbiaHTML(b *testing.B) {
 	if err != nil {
 		b.Error(err)
 	}
-	ext := Ext{Elements: ElementSlice{}}
+	ext := Ext{Elements: ElementMap{}}
 	for n := 0; n < b.N; n++ {
-		ext.parseGeofabrik(nil, nil, doc)
+		ext.ParseGeofabrik(nil, nil, doc)
 	}
 }
 
@@ -540,8 +540,8 @@ func Benchmark_Parser_geofabrikShikokuHTML(b *testing.B) {
 	if err != nil {
 		b.Error(err)
 	}
-	ext := Ext{Elements: ElementSlice{}}
+	ext := Ext{Elements: ElementMap{}}
 	for n := 0; n < b.N; n++ {
-		ext.parseGeofabrik(nil, nil, doc)
+		ext.ParseGeofabrik(nil, nil, doc)
 	}
 }

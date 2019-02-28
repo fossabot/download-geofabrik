@@ -1,4 +1,4 @@
-package main
+package downloadgeofabrik
 
 import (
 	"fmt"
@@ -14,7 +14,8 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-const progressMinimal = 512 * 1024 // Don't display progress bar if size < 512kb
+//ProgressMinimal : don't display progress bar if size < 512kb
+const ProgressMinimal = 512 * 1024
 
 func downloadFromURL(myURL string, fileName string) error {
 	if *fVerbose && !*fQuiet {
@@ -77,8 +78,7 @@ func downloadFromURL(myURL string, fileName string) error {
 		output = f
 		var n int64
 		var progressBar *pb.ProgressBar
-		if !*fQuiet && *fProgress && response.ContentLength > progressMinimal {
-
+		if !*fQuiet && *fProgress && response.ContentLength > ProgressMinimal {
 			progressBar = pb.New64(response.ContentLength)
 			progressBar.SetUnits(pb.U_BYTES)
 			progressBar.ShowTimeLeft = true

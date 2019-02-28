@@ -1,4 +1,4 @@
-package main
+package downloadgeofabrik
 
 import (
 	"reflect"
@@ -14,14 +14,14 @@ var SampleConfigValidPtr = Config{
 func Benchmark_loadConfig_geofabrik_yml(b *testing.B) {
 	// run the Fib function b.N times
 	for n := 0; n < b.N; n++ {
-		loadConfig("./geofabrik.yml")
+		LoadConfig("./geofabrik.yml")
 	}
 }
 
 func Benchmark_loadConfig_osmfr_yml(b *testing.B) {
 	// run the Fib function b.N times
 	for n := 0; n < b.N; n++ {
-		loadConfig("./openstreetmap.fr.yml")
+		LoadConfig("./openstreetmap.fr.yml")
 	}
 }
 
@@ -61,7 +61,7 @@ func Test_loadConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := loadConfig(tt.args.configFile)
+			got, err := LoadConfig(tt.args.configFile)
 			if err != nil != tt.wantErr {
 				t.Errorf("loadConfig() error = %v, wantErr %v", err, tt.wantErr)
 				return

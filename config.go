@@ -4,7 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package main
+package downloadgeofabrik
 
 import (
 	"io/ioutil"
@@ -21,21 +21,18 @@ type Config struct {
 	Elements map[string]Element `yaml:"elements"`
 }
 
-// loadConfig loading configFile and send *Config.
+// LoadConfig loading configFile and return *Config.
 // If there is an error, return it also.
-func loadConfig(configFile string) (*Config, error) {
+func LoadConfig(configFile string) (*Config, error) {
 	filename, _ := filepath.Abs(configFile)       // Get absolute path
 	fileContent, err := ioutil.ReadFile(filename) // Open file as string
 	if err != nil {
 		return nil, err
 	}
-	// Create a Config ptr
-	myConfigPtr := new(Config)
-	// Charging fileContent into myConfigPtr
-	err = yaml.Unmarshal(fileContent, myConfigPtr)
+	myConfigPtr := new(Config)                     // Create a Config ptr
+	err = yaml.Unmarshal(fileContent, myConfigPtr) // Charging fileContent into myConfigPtr
 	if err != nil {
 		return nil, err
 	}
-	// Everything is OK, returning myConfigPtr
-	return myConfigPtr, nil
+	return myConfigPtr, nil // Everything is OK, returning myConfigPtr
 }

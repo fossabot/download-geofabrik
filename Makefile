@@ -1,11 +1,11 @@
-gofiles  = download-geofabrik.go config.go download.go element.go formats.go generator.go
+gofiles  = cmd/download-geofabrik/main.go
 pkgfiles = CHANGELOG.md README.md LICENSE geofabrik.yml openstreetmap.fr.yml gislab.yml
 default: clean all
 clean:
 	go clean
 	rm -rf download-geofabrik_*/ *.zip
 gox:
-	gox --output="download-geofabrik_{{.OS}}_{{.Arch}}/{{.Dir}}"
+	gox --output="download-geofabrik_{{.OS}}_{{.Arch}}/{{.Dir}}" ./cmd/download-geofabrik
 geofabrik:
 	echo "Generating geofabrik.yml"
 	go run $(gofiles) generate --progress

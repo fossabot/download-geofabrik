@@ -1,4 +1,6 @@
-package main
+// package downloadgeofabrik is a tool to download a lot of things
+
+package downloadgeofabrik
 
 import (
 	"crypto/md5"
@@ -38,13 +40,13 @@ var (
 
 	download = app.Command("download", "Download element") //TODO : add d as command
 	delement = download.Arg("element", "OSM element").Required().String()
-	dosmBz2  = download.Flag("osm.bz2", "Download osm.bz2 if available").Short('B').Bool()
-	dshpZip  = download.Flag("shp.zip", "Download shp.zip if available").Short('S').Bool()
-	dosmPbf  = download.Flag("osm.pbf", "Download osm.pbf (default)").Short('P').Bool()
-	doshPbf  = download.Flag("osh.pbf", "Download osh.pbf").Short('H').Bool()
-	dstate   = download.Flag("state", "Download state.txt file").Short('s').Bool()
-	dpoly    = download.Flag("poly", "Download poly file").Short('p').Bool()
-	dkml     = download.Flag("kml", "Download kml file").Short('k').Bool()
+	dosmBz2  = download.Flag(ffosmBz2.ext, ffosmBz2.help).Short(ffosmBz2.shortcut).Bool()
+	dshpZip  = download.Flag(ffshpZip.ext, ffshpZip.help).Short(ffshpZip.shortcut).Bool()
+	dosmPbf  = download.Flag(ffosmPbf.ext, ffosmPbf.help).Short(ffosmPbf.shortcut).Bool()
+	doshPbf  = download.Flag(ffoshPbf.ext, ffoshPbf.help).Short(ffoshPbf.shortcut).Bool()
+	dstate   = download.Flag(ffstate.ext, ffstate.help).Short(ffstate.shortcut).Bool()
+	dpoly    = download.Flag(ffpoly.ext, ffpoly.help).Short(ffpoly.shortcut).Bool()
+	dkml     = download.Flag(ffkml.ext, ffkml.help).Short(ffkml.shortcut).Bool()
 	dCheck   = download.Flag("check", "Control with checksum (default) Use --no-check to discard control").Default("true").Bool()
 
 	generate = app.Command("generate", "Generate a new config file")
@@ -121,30 +123,29 @@ func listCommand() {
 	if *lmd {
 		format = "Markdown"
 	}
-	configPtr, err := loadConfig(*fConfig)
+	configPtr, err := LoadConfig(*fConfig)
 	catch(err)
 	listAllRegions(*configPtr, format)
 }
 
 func downloadCommand() {
-	configPtr, err := loadConfig(*fConfig)
+	configPtr, err := LoadConfig(*fConfig)
 	catch(err)
 	formatFile := getFormats()
 	for _, format := range *formatFile {
-		if ok, _, _ := isHashable(configPtr, format); *dCheck && ok {
-			if fileExist(*delement + "." + format) {
-				if !downloadChecksum(format) {
+		if ok, _, _ := isHashable(configPtr, format.ext); *dCheck && ok {
+			if IsFileExist(*delement + "." + format.ext) {
+				if !downloadChecksum(format.ext) {
 					if !*fQuiet {
-						log.Println("Checksum mismatch, re-downloading", *delement+"."+format)
+						log.Println("Checksum mismatch, re-downloading", *delement+"."+format.ext)
 					}
 					myElem, err := findElem(configPtr, *delement)
 					catch(err)
-					myURL, err := elem2URL(configPtr, myElem, format)
+					myURL, err := Element2URL(configPtr, myElem, format.ext)
 					catch(err)
-					err = downloadFromURL(myURL, *delement+"."+format)
+					err = downloadFromURL(myURL, *delement+"."+format.ext)
 					catch(err)
-					downloadChecksum(format)
-
+					downloadChecksum(format.ext)
 				} else {
 					if !*fQuiet {
 						log.Printf("Checksum match, no download!")
@@ -153,27 +154,27 @@ func downloadCommand() {
 			} else {
 				myElem, err := findElem(configPtr, *delement)
 				catch(err)
-				myURL, err := elem2URL(configPtr, myElem, format)
+				myURL, err := Element2URL(configPtr, myElem, format.ext)
 				catch(err)
-				err = downloadFromURL(myURL, *delement+"."+format)
+				err = downloadFromURL(myURL, *delement+"."+format.ext)
 				catch(err)
-				if !downloadChecksum(format) && !*fQuiet {
-					log.Println("Checksum mismatch, please re-download", *delement+"."+format)
+				if !downloadChecksum(format.ext) && !*fQuiet {
+					log.Println("Checksum mismatch, please re-download", *delement+"."+format.ext)
 				}
 			}
 		} else {
 			myElem, err := findElem(configPtr, *delement)
 			catch(err)
-			myURL, err := elem2URL(configPtr, myElem, format)
+			myURL, err := Element2URL(configPtr, myElem, format.ext)
 			catch(err)
-			err = downloadFromURL(myURL, *delement+"."+format)
+			err = downloadFromURL(myURL, *delement+"."+format.ext)
 			catch(err)
 		}
 	}
 }
 
-func main() {
-
+// Main function, load app and grab commands
+func Main() {
 	app.Version(version) // Add version flag
 	commands := kingpin.MustParse(app.Parse(os.Args[1:]))
 	checkService()
@@ -188,19 +189,20 @@ func main() {
 	case generate.FullCommand():
 		Generate(*fConfig)
 	}
-
 }
 
-func fileExist(filePath string) bool {
+// IsFileExist check if filePath is valid and exist or not
+func IsFileExist(filePath string) bool {
 	if _, err := os.Stat(filePath); err == nil {
 		return true
 	}
 	return false
 }
 
-func hashFileMD5(filePath string) (string, error) {
+//HashFileMD5 open filePath and try to md5sum it.
+func HashFileMD5(filePath string) (string, error) {
 	var returnMD5String string
-	if fileExist(filePath) {
+	if IsFileExist(filePath) {
 		file, err := os.Open(filePath)
 		if err != nil {
 			return returnMD5String, err
@@ -222,7 +224,7 @@ func hashFileMD5(filePath string) (string, error) {
 }
 
 func controlHash(hashfile string, hash string) (bool, error) {
-	if fileExist(hashfile) {
+	if IsFileExist(hashfile) {
 		file, err := ioutil.ReadFile(hashfile)
 		if err != nil {
 			return false, err
@@ -237,23 +239,23 @@ func controlHash(hashfile string, hash string) (bool, error) {
 }
 
 func downloadChecksum(format string) bool {
+	// TODO: use HashFormats!!!!
 	ret := false
 	if *dCheck {
-		hash := "md5"
-		fhash := format + "." + hash
-		configPtr, err := loadConfig(*fConfig)
+		fhash := format + "." + ffmd5.ext
+		configPtr, err := LoadConfig(*fConfig)
 		catch(err)
 		if ok, _, _ := isHashable(configPtr, format); ok {
 			myElem, err := findElem(configPtr, *delement)
 			catch(err)
-			myURL, err := elem2URL(configPtr, myElem, fhash)
+			myURL, err := Element2URL(configPtr, myElem, fhash)
 			catch(err)
 			err = downloadFromURL(myURL, *delement+"."+fhash)
 			catch(err)
 			if *fVerbose && !*fQuiet {
 				log.Println("Hashing", *delement+"."+format)
 			}
-			hashed, err := hashFileMD5(*delement + "." + format)
+			hashed, err := HashFileMD5(*delement + "." + format)
 			if err != nil {
 				log.Panic(fmt.Errorf(err.Error()))
 			}

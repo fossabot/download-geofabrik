@@ -1,4 +1,4 @@
-package main
+package downloadgeofabrik
 
 import (
 	"reflect"
@@ -105,10 +105,10 @@ var sampleFakeGeorgia2Ptr = Element{
 }
 
 func Benchmark_hasParent_parse_geofabrik_yml(b *testing.B) {
-	c, _ := loadConfig("./geofabrik.yml")
+	c, _ := LoadConfig("./geofabrik.yml")
 	for n := 0; n < b.N; n++ {
 		for _, v := range c.Elements {
-			v.hasParent()
+			v.HasParent()
 		}
 	}
 }
@@ -146,7 +146,7 @@ func TestElement_hasParent(t *testing.T) {
 				Formats: tt.fields.Formats,
 				Parent:  tt.fields.Parent,
 			}
-			if got := e.hasParent(); got != tt.want {
+			if got := e.HasParent(); got != tt.want {
 				t.Errorf("Element.hasParent() = %v, want %v", got, tt.want)
 			}
 		})
@@ -154,7 +154,7 @@ func TestElement_hasParent(t *testing.T) {
 }
 
 func Benchmark_findElem_parse_all_geofabrik_yml(b *testing.B) {
-	c, _ := loadConfig("./geofabrik.yml")
+	c, _ := LoadConfig("./geofabrik.yml")
 	for n := 0; n < b.N; n++ {
 		for k := range c.Elements {
 			findElem(c, k)
@@ -162,7 +162,7 @@ func Benchmark_findElem_parse_all_geofabrik_yml(b *testing.B) {
 	}
 }
 func Benchmark_findElem_parse_France_geofabrik_yml(b *testing.B) {
-	c, _ := loadConfig("./geofabrik.yml")
+	c, _ := LoadConfig("./geofabrik.yml")
 	for n := 0; n < b.N; n++ {
 		findElem(c, "france")
 	}
@@ -237,7 +237,7 @@ func Test_findElem(t *testing.T) {
 }
 
 func Benchmark_stringInSlice_parse_geofabrik_yml(b *testing.B) {
-	c, _ := loadConfig("./geofabrik.yml")
+	c, _ := LoadConfig("./geofabrik.yml")
 	sliceE := []string{}
 	for k := range c.Elements {
 		sliceE = append(sliceE, k)
@@ -249,7 +249,7 @@ func Benchmark_stringInSlice_parse_geofabrik_yml(b *testing.B) {
 	}
 }
 func Benchmark_stringInSlice_parse_geofabrik_yml_France_formats_osm_pbf(b *testing.B) {
-	c, _ := loadConfig("./geofabrik.yml")
+	c, _ := LoadConfig("./geofabrik.yml")
 	formats := c.Elements["france"].Formats
 	format := "osm.pbf"
 	for n := 0; n < b.N; n++ {
@@ -346,7 +346,7 @@ func Test_elem2URL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := elem2URL(tt.args.c, tt.args.e, tt.args.ext)
+			got, err := Element2URL(tt.args.c, tt.args.e, tt.args.ext)
 			if err != nil != tt.wantErr {
 				t.Errorf("elem2URL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -415,7 +415,7 @@ func Test_elem2preURL(t *testing.T) {
 	}
 }
 func Benchmark_elem2preURL_parse_France_geofabrik_yml(b *testing.B) {
-	c, err := loadConfig("./geofabrik.yml")
+	c, err := LoadConfig("./geofabrik.yml")
 	if err != nil {
 		b.Errorf(err.Error())
 	}
@@ -428,7 +428,7 @@ func Benchmark_elem2preURL_parse_France_geofabrik_yml(b *testing.B) {
 	}
 }
 func Benchmark_elem2URL_parse_France_geofabrik_yml(b *testing.B) {
-	c, err := loadConfig("./geofabrik.yml")
+	c, err := LoadConfig("./geofabrik.yml")
 	if err != nil {
 		b.Errorf(err.Error())
 	}
@@ -437,12 +437,12 @@ func Benchmark_elem2URL_parse_France_geofabrik_yml(b *testing.B) {
 		b.Errorf(err.Error())
 	}
 	for n := 0; n < b.N; n++ {
-		elem2URL(c, france, "state")
+		Element2URL(c, france, "state")
 	}
 }
 
 func Benchmark_elem2URL_parse_France_openstreetmap_fr_yml(b *testing.B) {
-	c, err := loadConfig("./openstreetmap.fr.yml")
+	c, err := LoadConfig("./openstreetmap.fr.yml")
 	if err != nil {
 		b.Errorf(err.Error())
 	}
@@ -451,6 +451,6 @@ func Benchmark_elem2URL_parse_France_openstreetmap_fr_yml(b *testing.B) {
 		b.Errorf(err.Error())
 	}
 	for n := 0; n < b.N; n++ {
-		elem2URL(c, france, "poly")
+		Element2URL(c, france, "poly")
 	}
 }

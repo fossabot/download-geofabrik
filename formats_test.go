@@ -1,4 +1,4 @@
-package main
+package downloadgeofabrik
 
 import (
 	"reflect"
@@ -33,7 +33,7 @@ var sampleFormatValidPtr = map[string]format{
 
 func Benchmark_miniFormats_parse_geofabrik_yml(b *testing.B) {
 	// run the Fib function b.N times
-	c, _ := loadConfig("./geofabrik.yml")
+	c, _ := LoadConfig("./geofabrik.yml")
 	for n := 0; n < b.N; n++ {
 		for _, v := range c.Elements {
 			miniFormats(v.Formats)
@@ -97,7 +97,7 @@ func Test_isHashable(t *testing.T) {
 		{name: "Test is kml is hashable", args: args{format: "kml", file: "./geofabrik.yml"}, want: false, want1: "", want2: ""},
 	}
 	for _, tt := range tests {
-		c, err := loadConfig(tt.args.file)
+		c, err := LoadConfig(tt.args.file)
 		if err != nil {
 			t.Error(err)
 		}
@@ -117,7 +117,7 @@ func Test_isHashable(t *testing.T) {
 }
 func Benchmark_isHashable_geofabrik_yml(b *testing.B) {
 	// run the Fib function b.N times
-	c, _ := loadConfig("./geofabrik.yml")
+	c, _ := LoadConfig("./geofabrik.yml")
 	for n := 0; n < b.N; n++ {
 		for f := range c.Formats {
 			isHashable(c, f)
@@ -137,7 +137,7 @@ func Test_getFormats(t *testing.T) {
 	}
 	tests := []struct {
 		name  string
-		want  []string
+		want  []fileFormat
 		flags dflags
 	}{
 		// TODO: Add test cases.
@@ -152,7 +152,7 @@ func Test_getFormats(t *testing.T) {
 				dpoly:   false,
 				dkml:    false,
 			},
-			want: []string{"osm.pbf"},
+			want: []fileFormat{ffosmPbf},
 		}, {
 			name: "dosmPbf",
 			flags: dflags{
@@ -164,7 +164,7 @@ func Test_getFormats(t *testing.T) {
 				dpoly:   false,
 				dkml:    false,
 			},
-			want: []string{"osm.pbf"},
+			want: []fileFormat{ffosmPbf},
 		}, {
 			name: "doshPbf",
 			flags: dflags{
@@ -176,7 +176,7 @@ func Test_getFormats(t *testing.T) {
 				dpoly:   false,
 				dkml:    false,
 			},
-			want: []string{"osh.pbf"},
+			want: []fileFormat{ffoshPbf},
 		}, {
 			name: "dosmPbf doshPbf",
 			flags: dflags{
@@ -188,7 +188,7 @@ func Test_getFormats(t *testing.T) {
 				dpoly:   false,
 				dkml:    false,
 			},
-			want: []string{"osm.pbf", "osh.pbf"},
+			want: []fileFormat{ffosmPbf, ffoshPbf},
 		}, {
 			name: "dosmBz2 dshpZip",
 			flags: dflags{
@@ -200,7 +200,7 @@ func Test_getFormats(t *testing.T) {
 				dpoly:   false,
 				dkml:    false,
 			},
-			want: []string{"osm.bz2", "shp.zip"},
+			want: []fileFormat{ffosmBz2, ffshpZip},
 		}, {
 			name: "dstate dpoly",
 			flags: dflags{
@@ -212,7 +212,7 @@ func Test_getFormats(t *testing.T) {
 				dpoly:   true,
 				dkml:    false,
 			},
-			want: []string{"state", "poly"},
+			want: []fileFormat{ffstate, ffpoly},
 		}, {
 			name: "dkml",
 			flags: dflags{
@@ -224,7 +224,7 @@ func Test_getFormats(t *testing.T) {
 				dpoly:   false,
 				dkml:    true,
 			},
-			want: []string{"kml"},
+			want: []fileFormat{ffkml},
 		},
 	}
 	for _, tt := range tests {

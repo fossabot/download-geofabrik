@@ -1,10 +1,11 @@
-package main
+package downloadgeofabrik
 
 import (
 	"fmt"
 	"strings"
 )
 
+// Element reflect an element can be downloaded over service, all formats....
 type Element struct {
 	ID      string   `yaml:"id"`
 	File    string   `yaml:"file,omitempty"`
@@ -14,11 +15,12 @@ type Element struct {
 	Parent  string   `yaml:"parent,omitempty"`
 }
 
-func (e *Element) hasParent() bool {
+//HasParent return true if e have any parent
+func (e *Element) HasParent() bool {
 	return len(e.Parent) != 0
 }
 
-func elem2URL(c *Config, e *Element, ext string) (string, error) {
+func Element2URL(c *Config, e *Element, ext string) (string, error) {
 	var res string
 	var err error
 	if !stringInSlice(&ext, &e.Formats) {
@@ -52,7 +54,7 @@ func elem2preURL(c *Config, e *Element, b ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if myElem.hasParent() {
+	if myElem.HasParent() {
 		parent, err := findElem(c, myElem.Parent)
 		if err != nil {
 			return "", err
